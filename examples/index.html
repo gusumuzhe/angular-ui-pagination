@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>pageDemo</title>
+    <script src="../lib/angular.js"></script>
+
+    <script type="text/javascript">
+        var app = angular.module('myApp', ['ui.pagination']);
+        app.controller('myController', function ($scope) {
+            $scope.log = function (no) {
+                console.log(no);
+            }
+        });
+
+        app.controller('anotherController', function ($scope) {
+            $scope.log = function (no) {
+                console.log(no);
+            }
+        });
+
+
+    </script>
+    <script src="../dist/pagination.js"></script>
+</head>
+<body ng-app="myApp" ng-controller="myController">
+
+<ui-pagination total="100" on-change="log(curPage)"></ui-pagination>
+
+
+</body>
+</html>
+
+
