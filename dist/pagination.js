@@ -135,7 +135,7 @@ angular.module('ui.pagination', []).directive('uiPagination', function () {
 
             $scope.$watch('total', function (newValue) {
                 if (newValue) {
-                    $scope.selectPage($scope.vm.currentPage || 1); // 总数变动，则重新选择该页
+                    $scope.selectPage($scope.vm.currentPage || 1, true); // 总数变动，则重新选择该页
                 }
             });
 
@@ -157,7 +157,7 @@ angular.module('ui.pagination', []).directive('uiPagination', function () {
             };
 
             // 选择页数
-            $scope.selectPage = function (pageNo) {
+            $scope.selectPage = function (pageNo, isForceRegerate) {
                 var prePage = $scope.vm.currentPage,
                     curPage;
 
@@ -171,7 +171,7 @@ angular.module('ui.pagination', []).directive('uiPagination', function () {
 
                 $scope.vm.pageCount = $scope.vm.currentPage = curPage;
 
-                if (curPage != prePage) {
+                if (curPage != prePage || isForceRegerate) {
                     $scope.vm.pageList = generatePageList(curPage, parseInt($scope.total), buttonCount);
 
                     // 调用回调方法

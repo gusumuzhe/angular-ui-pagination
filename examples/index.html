@@ -12,6 +12,8 @@
             $scope.log = function (no) {
                 console.log(no);
             }
+
+            $scope.total = 100;
         });
 
         app.controller('anotherController', function ($scope) {
@@ -26,9 +28,11 @@
 </head>
 <body ng-app="myApp" ng-controller="myController">
 
-<ui-pagination total="100" on-change="log(curPage)"></ui-pagination>
+<ui-pagination total="total" on-change="log(curPage)"></ui-pagination>
 
-
+<div>
+    <input type="number" ng-model="total"> <button>change</button>
+</div>
 </body>
 </html>
 
