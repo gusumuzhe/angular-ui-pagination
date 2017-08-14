@@ -29,6 +29,9 @@ angular.module('ui.pagination', [])
                     }
                 });
 
+                $scope.vm.currentPage = 1;
+                $scope.total = $scope.total || 1;
+
                 // 通过输入框直接输入页码
                 $scope.inputPageNo = function (event) {
                     // 如果回车了，则执行选择页面
@@ -47,7 +50,7 @@ angular.module('ui.pagination', [])
                 };
 
                 // 选择页数
-                $scope.selectPage = function (pageNo, isForceRegerate) {
+                $scope.selectPage = function (pageNo, isForceRegenerate) {
                     var prePage = $scope.vm.currentPage,
                         curPage;
 
@@ -61,7 +64,7 @@ angular.module('ui.pagination', [])
 
                     $scope.vm.pageCount = $scope.vm.currentPage = curPage;
 
-                    if (curPage != prePage || isForceRegerate) {
+                    if (curPage != prePage || isForceRegenerate) {
                         $scope.vm.pageList = generatePageList(curPage, parseInt($scope.total), buttonCount);
 
                         // 调用回调方法
