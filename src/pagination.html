@@ -4,8 +4,8 @@
         <li ng-click="selectPage(vm.currentPage - 1)"><a href="">上一页</a></li>
         <li class="page-button" ng-repeat="no in vm.pageList" ng-class="{'active': vm.currentPage == no}" ng-click="selectPage(no)"><a>{{no}}</a></li>
         <li ng-click="selectPage(vm.currentPage + 1)"><a href="">下一页</a></li>
-        <li ng-click="selectPage(total)"><a href="">尾页</a></li>
+        <li ng-click="selectPage(vm.totalPage)"><a href="">尾页</a></li>
     </ul>
 
-    <div class="page-count" ng-if="!disable">第 <input type="text" ng-model="vm.pageCount" ng-keypress="inputPageNo($event)"> 页 / {{total}}</div>
+    <div class="page-count" ng-if="!option.disableCounting">第 <input type="number" ng-model="vm.pageCount" ng-keypress="inputPageNo($event)"> 页 / {{vm.totalPage}}</div>
 </div>

@@ -70,7 +70,7 @@
 /* 0 */
 /***/ (function(module, exports) {
 
-module.exports = "<div class=\"pagination-container\">\r\n    <ul class=\"pagination\">\r\n        <li ng-click=\"selectPage(1)\"><a href=\"\">首页</a></li>\r\n        <li ng-click=\"selectPage(vm.currentPage - 1)\"><a href=\"\">上一页</a></li>\r\n        <li class=\"page-button\" ng-repeat=\"no in vm.pageList\" ng-class=\"{'active': vm.currentPage == no}\" ng-click=\"selectPage(no)\"><a>{{no}}</a></li>\r\n        <li ng-click=\"selectPage(vm.currentPage + 1)\"><a href=\"\">下一页</a></li>\r\n        <li ng-click=\"selectPage(total)\"><a href=\"\">尾页</a></li>\r\n    </ul>\r\n\r\n    <div class=\"page-count\" ng-if=\"!disable\">第 <input type=\"text\" ng-model=\"vm.pageCount\" ng-keypress=\"inputPageNo($event)\"> 页 / {{total}}</div>\r\n</div>";
+module.exports = "<div class=\"pagination-container\">\r\n    <ul class=\"pagination\">\r\n        <li ng-click=\"selectPage(1)\"><a href=\"\">首页</a></li>\r\n        <li ng-click=\"selectPage(vm.currentPage - 1)\"><a href=\"\">上一页</a></li>\r\n        <li class=\"page-button\" ng-repeat=\"no in vm.pageList\" ng-class=\"{'active': vm.currentPage == no}\" ng-click=\"selectPage(no)\"><a>{{no}}</a></li>\r\n        <li ng-click=\"selectPage(vm.currentPage + 1)\"><a href=\"\">下一页</a></li>\r\n        <li ng-click=\"selectPage(vm.totalPage)\"><a href=\"\">尾页</a></li>\r\n    </ul>\r\n\r\n    <div class=\"page-count\" ng-if=\"!option.disableCounting\">第 <input type=\"number\" ng-model=\"vm.pageCount\" ng-keypress=\"inputPageNo($event)\"> 页 / {{vm.totalPage}}</div>\r\n</div>";
 
 /***/ }),
 /* 1 */
@@ -112,35 +112,42 @@ if(false) {
 
 /**
  * Created by zhang on 2017/6/1.
+ * 初始化时，如果没有总页数，则默认一页
+ * 初始化时，默认第一页
  */
 var paginationCss = __webpack_require__(1);
 var paginationHtml = __webpack_require__(0);
 
 angular.module('ui.pagination', []).directive('uiPagination', function () {
+    var defaultOptions = {
+        pageSize: 5, // 每页条数
+        displayCount: 5, // 展示的可点击块数
+        disableCounting: false // 是否不展示页数输入框
+    };
+
     return {
-        restrict: 'ACE',
+        restrict: 'AE',
         template: paginationHtml,
         scope: {
-            total: '=', // 总共页数
-            buttonCount: '@', // 展示可点击的页数数量
+            pageSize: '@', // 总共页数， 默认5
+            displayCount: '@', // 展示可点击的块数量
             onChange: "&", // 当分页被选择，回调
-            disableCounting: '@' // 是否显示计数，默认显示
-        },
+            disableCounting: '@', // 是否显示计数，默认显示
+            totalItems: '=' },
         link: function link($scope) {
-            $scope.vm = {};
-
-            var buttonCount = $scope.buttonCount ? parseInt($scope.buttonCount) : 5; // 默认展示5个
-
-            $scope.vm.disable = $scope.disableCounting !== undefined && $scope.disableCounting !== 'false'; // 是否展示计数的框
-
-            $scope.$watch('total', function (newValue) {
-                if (newValue) {
-                    $scope.selectPage($scope.vm.currentPage || 1, true); // 总数变动，则重新选择该页
-                }
+            var option = $scope.option = parseOption({
+                pageSize: $scope.pageSize,
+                displayCount: $scope.displayCount,
+                disableCounting: $scope.disableCounting
             });
 
-            $scope.vm.currentPage = 1;
-            $scope.total = $scope.total || 1;
+            $scope.vm = {
+                currentPage: 1
+            };
+
+            $scope.$watch('totalItems', function () {
+                refresh();
+            });
 
             // 通过输入框直接输入页码
             $scope.inputPageNo = function (event) {
@@ -150,8 +157,7 @@ angular.module('ui.pagination', []).directive('uiPagination', function () {
 
                     // 不是数字，则置为当前页面
                     if (isNaN(pageNo)) {
-                        $scope.vm.pageCount = $scope.vm.currentPage;
-
+                        // $scope.vm.pageCount = $scope.vm.currentPage;
                         return;
                     }
 
@@ -160,27 +166,47 @@ angular.module('ui.pagination', []).directive('uiPagination', function () {
             };
 
             // 选择页数
-            $scope.selectPage = function (pageNo, isForceRegenerate) {
-                var prePage = $scope.vm.currentPage,
-                    curPage;
+            $scope.selectPage = function (pageNo) {
+                var prePage = $scope.vm.currentPage;
+                // curPage;
 
-                if (pageNo > $scope.total) {
-                    curPage = $scope.total;
-                } else if (pageNo < 1) {
-                    curPage = 1;
-                } else {
-                    curPage = pageNo;
-                }
+                // if (pageNo > $scope.vm.totalPage) {
+                //     curPage = $scope.vm.totalPage;
+                // } else if (pageNo < 1) {
+                //     curPage = 1;
+                // } else {
+                //     curPage = pageNo;
+                // }
 
-                $scope.vm.pageCount = $scope.vm.currentPage = curPage;
+                $scope.vm.currentPage = pageNo;
 
-                if (curPage != prePage || isForceRegenerate) {
-                    $scope.vm.pageList = generatePageList(curPage, parseInt($scope.total), buttonCount);
+                refresh();
+
+                // $scope.vm.pageCount = $scope.vm.currentPage = curPage;
+
+                if ($scope.vm.currentPage !== prePage) {
+                    // $scope.vm.pageList = generatePageList(curPage, parseInt($scope.totalPage), option.displayCount);
 
                     // 调用回调方法
-                    ($scope.onChange || angular.noop)({ curPage: curPage, prePage: prePage });
+                    ($scope.onChange || angular.noop)({ curPage: $scope.vm.currentPage, prePage: prePage });
                 }
             };
+
+            /**
+             * 刷新分页器
+             */
+            function refresh() {
+                $scope.vm.totalPage = getTotalPage(option.pageSize, $scope.totalItems);
+
+                if ($scope.vm.currentPage > $scope.vm.totalPage) {
+                    $scope.vm.currentPage = $scope.vm.totalPage;
+                } else if ($scope.vm.currentPage < 1) {
+                    $scope.vm.currentPage = 1;
+                }
+
+                $scope.vm.pageCount = $scope.vm.currentPage;
+                $scope.vm.pageList = generatePageList($scope.vm.currentPage, $scope.vm.totalPage, option.displayCount);
+            }
 
             /**
              * 生成分页器中可点页数
@@ -245,6 +271,29 @@ angular.module('ui.pagination', []).directive('uiPagination', function () {
 
                 return arrays;
             }
+
+            /**
+             * 计算总共页数
+             * @param pageSize
+             * @param totalItems
+             */
+            function getTotalPage(pageSize, totalItems) {
+                var totalPages = Math.ceil(totalItems / pageSize);
+
+                return totalPages || 1;
+            }
+
+            /**
+             * 解析页面配置
+             * @param option
+             */
+            function parseOption(option) {
+                option.pageSize = option.pageSize ? parseInt(option.pageSize) : defaultOptions.pageSize;
+                option.displayCount = option.displayCount ? parseInt(option.displayCount) : defaultOptions.displayCount;
+                option.disableCounting = option.disableCounting !== undefined && option.displayCount !== 'false';
+
+                return option;
+            }
         }
     };
 });
@@ -258,7 +307,7 @@ exports = module.exports = __webpack_require__(4)(undefined);
 
 
 // module
-exports.push([module.i, ".pagination-container {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  margin: 20px 0;\n  font-size: 14px;\n  line-height: 1.42857143;\n  color: #333; }\n  .pagination-container * {\n    -webkit-box-sizing: border-box;\n            box-sizing: border-box; }\n  .pagination-container ul.pagination {\n    display: inline-block;\n    margin: 0;\n    padding-left: 0;\n    border-radius: 4px; }\n    .pagination-container ul.pagination > li {\n      display: inline; }\n      .pagination-container ul.pagination > li > a {\n        position: relative;\n        float: left;\n        padding: 6px 12px;\n        margin-left: -1px;\n        line-height: 1.42857143;\n        color: #337ab7;\n        text-decoration: none;\n        background-color: #fff;\n        border: 1px solid #ddd; }\n      .pagination-container ul.pagination > li.active > a {\n        z-index: 3;\n        color: #fff;\n        cursor: default;\n        background-color: #337ab7;\n        border-color: #337ab7; }\n      .pagination-container ul.pagination > li:first-child > a {\n        margin-left: 0;\n        border-top-left-radius: 4px;\n        border-bottom-left-radius: 4px; }\n      .pagination-container ul.pagination > li:last-child > a {\n        border-top-right-radius: 4px;\n        border-bottom-right-radius: 4px; }\n    .pagination-container ul.pagination .page-button a {\n      min-width: 45px;\n      text-align: center; }\n  .pagination-container .page-count {\n    margin-left: 20px; }\n    .pagination-container .page-count input {\n      width: 36px;\n      padding: 0 5px;\n      border-radius: 4px;\n      border: 1px solid #ddd;\n      line-height: inherit;\n      font-size: inherit; }\n", ""]);
+exports.push([module.i, ".pagination-container {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n  margin: 20px 0;\n  font-size: 14px;\n  line-height: 1.42857143;\n  color: #333;\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none; }\n  .pagination-container * {\n    -webkit-box-sizing: border-box;\n            box-sizing: border-box; }\n  .pagination-container ul.pagination {\n    display: inline-block;\n    margin: 0;\n    padding-left: 0;\n    border-radius: 4px; }\n    .pagination-container ul.pagination > li {\n      display: inline; }\n      .pagination-container ul.pagination > li > a {\n        position: relative;\n        float: left;\n        padding: 6px 12px;\n        margin-left: -1px;\n        line-height: 1.42857143;\n        color: #337ab7;\n        text-decoration: none;\n        background-color: #fff;\n        border: 1px solid #ddd;\n        cursor: pointer; }\n      .pagination-container ul.pagination > li.active > a {\n        z-index: 3;\n        color: #fff;\n        cursor: default;\n        background-color: #337ab7;\n        border-color: #337ab7; }\n      .pagination-container ul.pagination > li:first-child > a {\n        margin-left: 0;\n        border-top-left-radius: 4px;\n        border-bottom-left-radius: 4px; }\n      .pagination-container ul.pagination > li:last-child > a {\n        border-top-right-radius: 4px;\n        border-bottom-right-radius: 4px; }\n    .pagination-container ul.pagination .page-button a {\n      min-width: 45px;\n      text-align: center; }\n  .pagination-container .page-count {\n    margin-left: 20px; }\n    .pagination-container .page-count input {\n      width: 45px;\n      padding: 0 5px;\n      border-radius: 4px;\n      border: 1px solid #ddd;\n      line-height: inherit;\n      font-size: inherit; }\n", ""]);
 
 // exports
 

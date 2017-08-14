@@ -1,5 +1,7 @@
 /**
  * Created by zhang on 2017/6/1.
+ * 初始化时，如果没有总页数，则默认一页
+ * 初始化时，默认第一页
  */
 var paginationCss = require('./pagination.scss');
 var paginationHtml = require('./pagination.html');
@@ -7,30 +9,37 @@ var paginationHtml = require('./pagination.html');
 
 angular.module('ui.pagination', [])
     .directive('uiPagination', function () {
+        var defaultOptions = {
+            pageSize: 5, // 每页条数
+            displayCount: 5, // 展示的可点击块数
+            disableCounting: false // 是否不展示页数输入框
+        };
+
         return {
-            restrict: 'ACE',
+            restrict: 'AE',
             template: paginationHtml,
             scope: {
-                total: '=', // 总共页数
-                buttonCount: '@', // 展示可点击的页数数量
+                pageSize: '@', // 总共页数， 默认5
+                displayCount: '@', // 展示可点击的块数量
                 onChange: "&", // 当分页被选择，回调
-                disableCounting: '@' // 是否显示计数，默认显示
+                disableCounting: '@', // 是否显示计数，默认显示
+                totalItems: '=', //总的条数
             },
             link: function ($scope) {
-                $scope.vm = {};
-
-                var buttonCount = $scope.buttonCount ? parseInt($scope.buttonCount) : 5; // 默认展示5个
-
-                $scope.vm.disable = ($scope.disableCounting !== undefined && $scope.disableCounting !== 'false'); // 是否展示计数的框
-
-                $scope.$watch('total', function (newValue) {
-                    if (newValue) {
-                        $scope.selectPage($scope.vm.currentPage || 1, true); // 总数变动，则重新选择该页
-                    }
+                var option = $scope.option = parseOption({
+                    pageSize: $scope.pageSize,
+                    displayCount: $scope.displayCount,
+                    disableCounting: $scope.disableCounting
                 });
 
-                $scope.vm.currentPage = 1;
-                $scope.total = $scope.total || 1;
+                $scope.vm = {
+                    currentPage: 1,
+                    // totalPage: getTotalPage(option.pageSize, $scope.totalItems)
+                };
+
+                $scope.$watch('totalItems', function () {
+                    refresh();
+                });
 
                 // 通过输入框直接输入页码
                 $scope.inputPageNo = function (event) {
@@ -40,8 +49,7 @@ angular.module('ui.pagination', [])
 
                         // 不是数字，则置为当前页面
                         if (isNaN(pageNo)) {
-                            $scope.vm.pageCount = $scope.vm.currentPage;
-
+                            // $scope.vm.pageCount = $scope.vm.currentPage;
                             return;
                         }
 
@@ -50,27 +58,47 @@ angular.module('ui.pagination', [])
                 };
 
                 // 选择页数
-                $scope.selectPage = function (pageNo, isForceRegenerate) {
-                    var prePage = $scope.vm.currentPage,
-                        curPage;
+                $scope.selectPage = function (pageNo) {
+                    var prePage = $scope.vm.currentPage;
+                        // curPage;
 
-                    if (pageNo > $scope.total) {
-                        curPage = $scope.total;
-                    } else if (pageNo < 1) {
-                        curPage = 1;
-                    } else {
-                        curPage = pageNo;
-                    }
+                    // if (pageNo > $scope.vm.totalPage) {
+                    //     curPage = $scope.vm.totalPage;
+                    // } else if (pageNo < 1) {
+                    //     curPage = 1;
+                    // } else {
+                    //     curPage = pageNo;
+                    // }
 
-                    $scope.vm.pageCount = $scope.vm.currentPage = curPage;
+                    $scope.vm.currentPage = pageNo;
 
-                    if (curPage != prePage || isForceRegenerate) {
-                        $scope.vm.pageList = generatePageList(curPage, parseInt($scope.total), buttonCount);
+                    refresh();
+
+                    // $scope.vm.pageCount = $scope.vm.currentPage = curPage;
+
+                    if ($scope.vm.currentPage !== prePage) {
+                        // $scope.vm.pageList = generatePageList(curPage, parseInt($scope.totalPage), option.displayCount);
 
                         // 调用回调方法
-                        ($scope.onChange || angular.noop)({curPage: curPage, prePage: prePage});
+                        ($scope.onChange || angular.noop)({curPage: $scope.vm.currentPage, prePage: prePage});
                     }
                 };
+
+                /**
+                 * 刷新分页器
+                 */
+                function refresh() {
+                    $scope.vm.totalPage = getTotalPage(option.pageSize, $scope.totalItems);
+
+                    if ($scope.vm.currentPage > $scope.vm.totalPage) {
+                        $scope.vm.currentPage = $scope.vm.totalPage;
+                    } else if ($scope.vm.currentPage < 1) {
+                        $scope.vm.currentPage = 1;
+                    }
+
+                    $scope.vm.pageCount = $scope.vm.currentPage;
+                    $scope.vm.pageList = generatePageList($scope.vm.currentPage, $scope.vm.totalPage, option.displayCount);
+                }
 
                 /**
                  * 生成分页器中可点页数
@@ -134,6 +162,29 @@ angular.module('ui.pagination', [])
                     }
 
                     return arrays;
+                }
+
+                /**
+                 * 计算总共页数
+                 * @param pageSize
+                 * @param totalItems
+                 */
+                function getTotalPage(pageSize, totalItems) {
+                    var totalPages = Math.ceil(totalItems / pageSize);
+
+                    return totalPages || 1;
+                }
+
+                /**
+                 * 解析页面配置
+                 * @param option
+                 */
+                function parseOption(option) {
+                    option.pageSize = option.pageSize ? parseInt(option.pageSize) : defaultOptions.pageSize;
+                    option.displayCount = option.displayCount ? parseInt(option.displayCount) : defaultOptions.displayCount;
+                    option.disableCounting = option.disableCounting !== undefined && option.displayCount !== 'false';
+
+                    return option;
                 }
             }
         };
