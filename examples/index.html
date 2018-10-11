@@ -9,16 +9,16 @@
     <script type="text/javascript">
         var app = angular.module('myApp', ['ui.pagination']);
         app.controller('myController', function ($scope) {
-            $scope.log = function (no) {
-                console.log(no);
+            $scope.log = function (no,pre,start,end) {
+                console.log(start,end);
             }
 
             $scope.total = 100;
         });
 
         app.controller('anotherController', function ($scope) {
-            $scope.log = function (no) {
-                console.log(no);
+            $scope.log = function (no,pre,start,end) {
+                console.log(start,end);
             }
         });
 
